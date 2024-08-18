@@ -2,21 +2,22 @@
 #include <iostream>
 #include <exception>
 #include <string>
-#include <mutex>
 #include <cstdio>
-#include <vector>
 #include <algorithm>
-
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
 
 #define PORT 4096
+int sock;
+struct sockaddr_in addr;
 
 std::exception_ptr eptr;
-std::mutex data_mutex;
 std::string data;
 
 void thread2() {
     while(true) {
-        int count{};
+        int sum{};
         while(data.empty());
         if(eptr) std::rethrow_exception(eptr);
         std::string str(data);
@@ -24,14 +25,11 @@ void thread2() {
         std::cout << str << std::endl;
         for(char c : str) {
             if(std::isdigit(c)) {
-                count++;
+                sum += c - '0';
             }
         }
-        
+        send(sock, &sum, sizeof(sum), 0);
     }
-    
-    
-
 }
 
 void thread1() {
@@ -47,7 +45,7 @@ void thread1() {
                 } 
                 str.push_back(c);
             }
-            if(str.size() >= 64) {
+            if(str.size() > 64) {
                 throw std::runtime_error {"The maximum size of the input string cannot exceed 64."};
             }
             std::sort(str.begin(), str.end());
@@ -72,6 +70,12 @@ void thread1() {
 
 int main() {
     data.reserve(128);
+    sock = socket(AF_INET, SOCK_DGRAM, 0);
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(PORT);
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    connect(sock, (struct sockaddr *)&addr, sizeof(addr));
+
     std::thread thr1(thread1);
     std::thread thr2(thread2);
     while(!eptr);
