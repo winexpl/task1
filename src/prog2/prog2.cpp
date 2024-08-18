@@ -4,20 +4,15 @@
 #include <netinet/in.h>
 #include <cstdio>
 #include <errno.h>
+#include "../MySocket/my_socket.hpp"
 
-#define PORT 4096
-int sock;
-struct sockaddr_in addr;
 
 int main() {
-    sock = socket(AF_INET, SOCK_DGRAM, 0);
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(PORT);
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    bind(sock, (struct sockaddr *)&addr, sizeof(addr));
+    Socket socket{};
+    socket.bind_to();
     while(true) {
         int x;
-        if(recvfrom(sock, &x, sizeof(int), 0, NULL, NULL) > sizeof(int)) {
+        if(socket.recv_from(&x, sizeof(x)) > sizeof(int)) {
             throw std::runtime_error("Incorrect data read.");
         }
         if( (x / 100 > 0) && (x % 32 == 0) )
